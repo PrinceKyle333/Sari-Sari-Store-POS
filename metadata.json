@@ -1,0 +1,6 @@
+{
+  "name": "Tindahan POS — Sari-Sari Store",
+  "description": "Offline-first mobile Point of Sale, inventory, barcode scanner, and utang tracker for Filipino sari-sari stores.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

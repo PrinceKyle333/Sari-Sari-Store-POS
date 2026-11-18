@@ -19,6 +19,7 @@ import { CheckoutModal } from './components/CheckoutModal';
 import { CreditList } from './components/CreditList';
 import { EWalletModule } from './components/EWalletModule';
 import { LandingPage } from './components/LandingPage';
+import { WelcomeScreen } from './components/WelcomeScreen';
 import { ProductForm } from './components/ProductForm';
 import { ProductList } from './components/ProductList';
 import { Reports } from './components/Reports';
@@ -28,6 +29,7 @@ import { StaffAuthModal } from './components/StaffAuthModal';
 import { StockAdjust } from './components/StockAdjust';
 import { ToastContainer, type ToastMessage } from './components/ToastContainer';
 import { loadPOSStateFromDB, savePOSStateToDB } from './db/posDb';
+import { useAndroidBackButton } from './hooks/useAndroidBackButton';
 import { useOnlineStatus } from './hooks/useOnlineStatus';
 import type {
   CartItem,
@@ -104,6 +106,8 @@ export default function App() {
   const [state, setState] = useState<POSState>(DEFAULT_POS_STATE);
   const [dbLoaded, setDbLoaded] = useState(false);
   const [activeModule, setActiveModule] = useState<AppModule>(getInitialModule);
+  // Branded welcome screen shown each time the app is opened on the home screen.
+  const [showWelcome, setShowWelcome] = useState(() => getInitialModule() === 'landing');
   const [activeTab, setActiveTab] = useState<TabId>('sell');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [mobileCartOpen, setMobileCartOpen] = useState(false);
@@ -185,79 +189,35 @@ export default function App() {
     []
   );
 
+  // Android back button: close the top-most layer, then step back through
+  // tabs/modules, and only exit the app from the landing screen.
+  useAndroidBackButton(() => {
+    if (showWelcome) return false;
+    if (scannerPurpose !== null) return setScannerPurpose(null), true;
+    if (stockAdjustTarget !== null) return setStockAdjustTarget(null), true;
+    if (productFormOpen) {
+      setProductFormOpen(false);
+      setEditingProduct(null);
+      setPrefillBarcode('');
+      return true;
+    }
+    if (checkoutOpen) {
+      setCheckoutOpen(false);
+      setCompletedSale(null);
+      return true;
+    }
+    if (activityLogOpen) return setActivityLogOpen(false), true;
+    if (sellUnitPrompt !== null) return setSellUnitPrompt(null), true;
+    if (existingScanProduct !== null) return setExistingScanProduct(null), true;
+    if (mobileCartOpen) return setMobileCartOpen(false), true;
+    if (activeModule === 'pos' && activeTab !== 'sell') return setActiveTab('sell'), true;
+    if (activeModule !== 'landing') return setActiveModule('landing'), true;
+    return false;
+  });
+
   const dismissToast = useCallback((id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
-
-  // --- Store Shift & Sync ---
-  const handleOpenStoreShift = () => {
-    const nowIso = new Date().toISOString();
-    const audit = createAuditLog(
-      activeStaff,
-      'store',
-      'Opened Store',
-      'Daily store operations started.',
-      nowIso
-    );
-    setState((prev) => ({
-      ...prev,
-      storeShift: {
-        isOpen: true,
-        openedAt: nowIso,
-        openedByStaffId: activeStaff.id,
-        openedByStaffName: activeStaff.name,
-      },
-      auditLogs: [audit, ...prev.auditLogs].slice(0, 300),
-      syncQueue: enqueueSyncMutation(prev.syncQueue, {
-        idempotencyKey: `shift-open-${nowIso}`,
-        entityType: 'store_shift',
-        entityId: 'shift',
-        operation: 'update',
-        revision: 1,
-        payloadSummary: 'Open Store',
-        nowIso,
-      }),
-    }));
-    notify('Store is now open', 'success');
-  };
-
-  const handleCloseStoreShift = () => {
-    const nowIso = new Date().toISOString();
-    const audit = createAuditLog(
-      activeStaff,
-      'store',
-      'Closed Store',
-      'Daily store operations closed.',
-      nowIso
-    );
-    setState((prev) => ({
-      ...prev,
-      storeShift: {
-        ...prev.storeShift,
-        isOpen: false,
-        closedAt: nowIso,
-        closedByStaffName: activeStaff.name,
-      },
-      auditLogs: [audit, ...prev.auditLogs].slice(0, 300),
-    }));
-    notify('Store closed', 'info');
-  };
-
-  const handleSyncNow = () => {
-    if (!isOnline) {
-      notify('Offline: changes saved locally and will sync when online', 'info');
-      return;
-    }
-    const res = reconcileSyncQueue(state);
-    setState(res.nextState);
-    if (res.syncedCount > 0) {
-      notify(`Synced ${res.syncedCount} offline record(s)`, 'success');
-    } else if (res.conflictCount > 0) {
-      notify(`${res.conflictCount} sync conflict(s) flagged`, 'error');
-    } else {
-      notify('All local data is up to date', 'success');
-    }
-  };
 
   // --- E-Wallet Handlers ---
   const handleCreateEWalletTx = (input: {
@@ -689,6 +649,15 @@ export default function App() {
   const showFloatingScan =
     activeModule === 'pos' && (activeTab === 'sell' || activeTab === 'products');
 
+  if (showWelcome) {
+    return (
+      <WelcomeScreen
+        storeName={state.settings.storeName}
+        onEnter={() => setShowWelcome(false)}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-stone-200/70">
       {/* Android-first mobile shell */}
@@ -706,6 +675,15 @@ export default function App() {
                 >
                   <ArrowLeft className="h-4 w-4" aria-hidden="true" />
                 </button>
+              )}
+              {activeModule === 'landing' && (
+                <img
+                  src="/reston-logo.png"
+                  alt=""
+                  width={32}
+                  height={32}
+                  className="h-8 w-8 shrink-0 rounded-lg"
+                />
               )}
               <h1 className="truncate text-base font-bold tracking-tight text-stone-900 whitespace-nowrap">
                 {activeModule === 'ewallet'
@@ -751,13 +729,9 @@ export default function App() {
           ) : activeModule === 'landing' ? (
             <LandingPage
               state={state}
-              isOnline={isOnline}
-              onOpenStoreShift={handleOpenStoreShift}
-              onCloseStoreShift={handleCloseStoreShift}
               onOpenPOS={() => setActiveModule('pos')}
               onOpenEWallet={() => setActiveModule('ewallet')}
               onOpenActivityLog={() => setActivityLogOpen(true)}
-              onSyncNow={handleSyncNow}
               onLoadSampleData={handleLoadSampleData}
             />
           ) : activeModule === 'ewallet' ? (

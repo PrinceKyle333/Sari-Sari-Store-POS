@@ -1,5 +1,5 @@
 {
-  "name": "react-example",
+  "name": "tindahan-pos",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -8,9 +8,20 @@
     "build": "vite build",
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "build:mobile": "vite build --mode native && cap sync",
+    "android": "npm run build:mobile && cap open android",
+    "android:run": "npm run build:mobile && cap run android",
+    "ios": "npm run build:mobile && cap open ios",
+    "mobile:assets": "capacitor-assets generate --android --ios --iconBackgroundColor \"#023824\" --splashBackgroundColor \"#023824\" --iconBackgroundColorDark \"#023824\" --splashBackgroundColorDark \"#023824\""
   },
   "dependencies": {
+    "@capacitor/android": "^8.6.2",
+    "@capacitor/app": "^8.1.2",
+    "@capacitor/core": "^8.6.2",
+    "@capacitor/ios": "^8.6.2",
+    "@capacitor/splash-screen": "^8.0.2",
+    "@capacitor/status-bar": "^8.0.4",
     "@google/genai": "^2.4.0",
     "@tailwindcss/vite": "^4.3.3",
     "@vitejs/plugin-react": "^6.1.1",
@@ -25,6 +36,8 @@
     "vite": "^8.3.0"
   },
   "devDependencies": {
+    "@capacitor/assets": "^4.0.0",
+    "@capacitor/cli": "^8.6.2",
     "@types/express": "^4.17.21",
     "@types/node": "^22.14.0",
     "@types/react": "^19.3.0",

@@ -4,20 +4,22 @@ import path from 'path';
 import {defineConfig} from 'vite';
 import {VitePWA} from 'vite-plugin-pwa';
 
-export default defineConfig(() => {
+export default defineConfig(({ mode }) => {
   return {
     plugins: [
       react(),
       tailwindcss(),
       VitePWA({
+        // Native (Capacitor) builds ship the bundle locally; no service worker needed.
+        disable: mode === 'native',
         registerType: 'autoUpdate',
-        includeAssets: ['icon.svg', 'apple-touch-icon.png', 'pwa-192x192.png', 'pwa-512x512.png', 'pwa-maskable-512x512.png'],
+        includeAssets: ['favicon.png', 'reston-logo.png', 'apple-touch-icon.png', 'pwa-192x192.png', 'pwa-512x512.png', 'pwa-maskable-512x512.png'],
         manifest: {
           id: '/',
-          name: 'Tindahan POS — Sari-Sari Store',
-          short_name: 'TindahanPOS',
+          name: 'Reston Store — Sari-Sari Store POS',
+          short_name: 'Reston Store',
           description: 'Offline-first mobile Point of Sale, inventory, barcode scanner, and utang tracker for Filipino sari-sari stores.',
-          theme_color: '#047857',
+          theme_color: '#023824',
           background_color: '#fafaf9',
           display: 'standalone',
           start_url: '/',

@@ -1,12 +1,17 @@
 import React, { useState } from 'react';
 import { Download, Smartphone } from 'lucide-react';
 import { usePWAInstall } from '../hooks/usePWAInstall';
+import { isNativeApp } from '../utils/native';
 
 interface PWAInstallButtonProps {
   compact?: boolean;
 }
 
-export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({ compact = false }) => {
+// Already a native app — there is nothing to install.
+export const PWAInstallButton: React.FC<PWAInstallButtonProps> = (props) =>
+  isNativeApp ? null : <PWAInstallButtonWeb {...props} />;
+
+const PWAInstallButtonWeb: React.FC<PWAInstallButtonProps> = ({ compact = false }) => {
   const { isInstallable, isInstalled, isIOS, install } = usePWAInstall();
   const [showIOSGuide, setShowIOSGuide] = useState(false);
 
